@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const shortId = require('shortid');
 const fileDir = require('../util/path');
+const Cart = require('./cart');
 
 const getProductsFromFile = () => {
     const p = path.join(fileDir,
@@ -16,10 +17,17 @@ const getProductsFromFile = () => {
                     products: []
                 });
             }
-            resolve({
-                path: p,
-                products: JSON.parse(data)
-            });
+            try {
+                resolve({
+                    path: p,
+                    products: JSON.parse(data)
+                });
+            } catch (e) {
+                resolve({
+                    path: p,
+                    products: []
+                });
+            }
         });
     });
 };
@@ -48,6 +56,20 @@ module.exports = class Product {
             }
             fs.writeFile(resolve.path, JSON.stringify(resolve.products), err1 => {
                 console.log(err1);
+            });
+        });
+    }
+
+    static deleteById(id) {
+        getProductsFromFile().then(resolve => {
+            const prod = resolve.products.find(p => p.id === id);
+            const updatedProducts = resolve.products.filter(p => p.id !== id);
+            const parsedJson = JSON.stringify(updatedProducts);
+            fs.writeFile(resolve.path, parsedJson, err => {
+                console.log("Whatever");
+                if (!err) {
+                    Cart.deleteProductById(id, prod.price);
+                }
             });
         });
     }
