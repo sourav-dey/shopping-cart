@@ -6,9 +6,8 @@ const parser = require('body-parser');
 const adminRoutes = require('./routes/admin');
 const shopRoutes = require('./routes/shop');
 const error = require('./controllers/error');
-const sequelize = require('./util/database');
-const Product = require('./models/product');
-const User = require('./models/user');
+const mongoConnect = require('./util/database').mongoConnect;
+
 const app = express();
 
 app.set('view engine', 'ejs');
@@ -19,22 +18,20 @@ app.use(parser.urlencoded({
 }));
 app.use(express.static(path.join(__dirname)));
 
-app.use('/admin', adminRoutes.routes);
-app.use(shopRoutes);
+// app.use((req, resp, next) => {
+//     User.findByPk(1)
+//         .then(user => {
+//             req.user = user;
+//             next();
+//         })
+//         .catch(err => console.error(err));
+// });
+
+ app.use('/admin', adminRoutes.routes);
+ app.use(shopRoutes);
 
 app.use(error.get404Page);
 
-Product.belongsTo(User, {
-    constraints: true,
-    onDelete: 'CASCADE'
+mongoConnect(() => {
+    app.listen(8080, () => console.log('Listening to 8080'));
 });
-
-User.hasMany(Product);
-
-sequelize.sync({
-        force: true
-    }).then(
-        result => {
-            app.listen(8080, () => console.log("Listening to port 8080"));
-        })
-    .catch(err => console.error(err));

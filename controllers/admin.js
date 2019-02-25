@@ -14,7 +14,7 @@ exports.getEditProduct = (req, resp) => {
         return resp.redirect('/');
     }
     const productId = req.params.productId;
-    Product.findByPk(productId)
+    Product.findById(productId)
         .then((product) => {
             if (!product) {
                 return resp.redirect('/');
@@ -34,12 +34,8 @@ exports.postAddProduct = (req, resp) => {
     const imageUrl = req.body.imageUrl;
     const price = req.body.price;
     const description = req.body.description;
-    Product.create({
-            title: title,
-            price: price,
-            imageUrl: imageUrl,
-            description: description
-        })
+    const product = new Product(title, price, description, imageUrl);
+    product.save()
         .then(result => {
             resp.redirect('/admin/products');
         })
@@ -53,20 +49,16 @@ exports.postEditProduct = (req, resp) => {
     const price = req.body.price;
     const description = req.body.description;
 
-    Product.findByPk(id)
-        .then(product => {
-            product.title = title;
-            product.imageUrl = imageUrl;
-            product.price = price;
-            product.description = description;
-            return product.save();
+    const product = new Product(title, price, description, imageUrl, id);
+    product.save()
+        .then(result => {
+            resp.redirect('/admin/products')
         })
-        .then(result => resp.redirect('/admin/products'))
         .catch(err => console.error(err));
 };
 
 exports.getProducts = (req, resp) => {
-    Product.findAll()
+    Product.fetchAll()
         .then((products) => {
             resp.render('admin/products', {
                 prods: products,
@@ -80,10 +72,10 @@ exports.getProducts = (req, resp) => {
 exports.postDeleteProduct = (req, resp) => {
     const productId = req.body.productId;
     Product.destroy({
-        where: {
-            id: productId
-        }
-    })
-    .then(() => resp.redirect('/admin/products'))
-    .catch(err => console.error(err));
+            where: {
+                id: productId
+            }
+        })
+        .then(() => resp.redirect('/admin/products'))
+        .catch(err => console.error(err));
 };
