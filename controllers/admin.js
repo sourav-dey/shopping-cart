@@ -1,3 +1,5 @@
+const mongoose = require('mongoose');
+
 const Product = require('../models/product');
 
 exports.getAddProduct = (req, resp) => {
@@ -34,7 +36,13 @@ exports.postAddProduct = (req, resp) => {
     const imageUrl = req.body.imageUrl;
     const price = req.body.price;
     const description = req.body.description;
-    const product = new Product(title, price, description, imageUrl);
+    const product = new Product({
+        title: title,
+        imageUrl: imageUrl,
+        price: price,
+        description: description,
+        userId: req.user
+    });
     product.save()
         .then(result => {
             resp.redirect('/admin/products');
@@ -49,8 +57,20 @@ exports.postEditProduct = (req, resp) => {
     const price = req.body.price;
     const description = req.body.description;
 
-    const product = new Product(title, price, description, imageUrl, id);
-    product.save()
+    let product = {
+        title: title,
+        price: price,
+        description: description,
+        imageUrl: imageUrl
+    };
+
+    Product.findOneAndUpdate({
+                _id: mongoose.Types.ObjectId(id)
+            },
+            product, {
+                upsert: true
+            }
+        )
         .then(result => {
             resp.redirect('/admin/products')
         })
@@ -58,7 +78,7 @@ exports.postEditProduct = (req, resp) => {
 };
 
 exports.getProducts = (req, resp) => {
-    Product.fetchAll()
+    Product.find()
         .then((products) => {
             resp.render('admin/products', {
                 prods: products,
@@ -71,11 +91,7 @@ exports.getProducts = (req, resp) => {
 
 exports.postDeleteProduct = (req, resp) => {
     const productId = req.body.productId;
-    Product.destroy({
-            where: {
-                id: productId
-            }
-        })
+    Product.findByIdAndDelete(productId)
         .then(() => resp.redirect('/admin/products'))
         .catch(err => console.error(err));
 };
