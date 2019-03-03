@@ -3,7 +3,7 @@ const env = require('dotenv')
 
 env.config();
 
-const url = 'mongodb+srv://' + process.env.MONGO_DB_USER + ':' + process.env.MONGO_DB_PWD + '@cluster0-qkyap.mongodb.net/shop?retryWrites=true';
+const url = 'mongodb+srv://' + process.env.MONGO_DB_USER + ':' + process.env.MONGO_DB_PWD + '@cluster0-qkyap.mongodb.net/shop';
 
 mongoose.set('useFindAndModify', false);
 const mongoConnect = callback => {
@@ -11,3 +11,4 @@ const mongoConnect = callback => {
 }
 
 exports.mongoConnect = mongoConnect;
+exports.dbUri = url;

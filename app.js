@@ -2,14 +2,23 @@ const path = require('path');
 
 const express = require('express');
 const parser = require('body-parser');
+const session = require('express-session');
+const MongoDBStore = require('connect-mongodb-session')(session);
 
 const adminRoutes = require('./routes/admin');
 const shopRoutes = require('./routes/shop');
+const authRoutes = require('./routes/auth');
+
 const error = require('./controllers/error');
 const User = require('./models/user');
 const mongooseConnect = require('./util/database').mongoConnect;
+const dbUri = require('./util/database').dbUri;
 
 const app = express();
+const store = new MongoDBStore({
+    uri: dbUri,
+    collection: 'sessions'
+});
 
 app.set('view engine', 'ejs');
 app.set('views', 'views');
@@ -18,37 +27,33 @@ app.use(parser.urlencoded({
     extended: true
 }));
 app.use(express.static(path.join(__dirname)));
+app.use(session({
+    secret: 'my secret',
+    resave: false,
+    saveUninitialized: false,
+    store: store
+}));
 
 app.use((req, resp, next) => {
-    User.findById('5c778ed622918c48303dce22')
-        .then(user => {
-            req.user = user;
-            next();
-        })
-        .catch(err => console.error(err));
+    if (req.session.user) {
+        User.findById(req.session.user._id)
+            .then(user => {
+                req.user = user;
+                next();
+            })
+            .catch(err => console.error(err));
+    } else {
+        next();
+    }
 });
 
 app.use('/admin', adminRoutes.routes);
 app.use(shopRoutes);
+app.use(authRoutes.routes);
 
 app.use(error.get404Page);
 
 mongooseConnect().then(() => {
-        User.findById('5c778ed622918c48303dce22')
-            .then(user => {
-                if (!user) {
-                    const newUser = new User({
-                        name: 'Sourav',
-                        email: 'sourav.dey9@gmail.com',
-                        cart: {
-                            items: []
-                        }
-                    });
-                    newUser.save();
-                }
-            })
-            .catch(err => console.error(err));
-
         app.listen(8080, () => console.log('Listening to port 8080'))
     })
     .catch(err => console.error(err));
