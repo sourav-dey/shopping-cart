@@ -4,6 +4,8 @@ const express = require('express');
 const parser = require('body-parser');
 const session = require('express-session');
 const MongoDBStore = require('connect-mongodb-session')(session);
+const csrf = require('csurf');
+const flash = require('connect-flash');
 
 const adminRoutes = require('./routes/admin');
 const shopRoutes = require('./routes/shop');
@@ -20,6 +22,8 @@ const store = new MongoDBStore({
     collection: 'sessions'
 });
 
+const csrfProtestection = csrf();
+
 app.set('view engine', 'ejs');
 app.set('views', 'views');
 
@@ -34,6 +38,9 @@ app.use(session({
     store: store
 }));
 
+app.use(csrfProtestection);
+app.use(flash());
+
 app.use((req, resp, next) => {
     if (req.session.user) {
         User.findById(req.session.user._id)
@@ -45,6 +52,12 @@ app.use((req, resp, next) => {
     } else {
         next();
     }
+});
+
+app.use((req, resp, next) => {
+    resp.locals.isAuthenticated = req.session.isLoggedIn;
+    resp.locals.csrfToken = req.csrfToken();
+    next();
 });
 
 app.use('/admin', adminRoutes.routes);

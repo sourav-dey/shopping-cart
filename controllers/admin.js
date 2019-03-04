@@ -3,6 +3,9 @@ const mongoose = require('mongoose');
 const Product = require('../models/product');
 
 exports.getAddProduct = (req, resp) => {
+    if (!req.session.isLoggedIn) {
+        return resizeBy.redirect('/login');
+    }
     resp.render('admin/edit-product', {
         pageTitle: 'Add Product',
         path: '/admin/add-product',
