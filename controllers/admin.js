@@ -70,20 +70,24 @@ exports.postEditProduct = (req, resp) => {
     };
 
     Product.findOneAndUpdate({
-                _id: mongoose.Types.ObjectId(id)
+                _id: mongoose.Types.ObjectId(id),
+                userId: req.user._id
             },
             product, {
                 upsert: true
             }
         )
         .then(result => {
+            if (result.userId !== req.user._id) {
+                return resp.redirect('/');
+            }
             resp.redirect('/admin/products')
         })
         .catch(err => console.error(err));
 };
 
 exports.getProducts = (req, resp) => {
-    Product.find()
+    Product.find({userId: req.user._id})
         .then((products) => {
             resp.render('admin/products', {
                 prods: products,
@@ -97,7 +101,7 @@ exports.getProducts = (req, resp) => {
 
 exports.postDeleteProduct = (req, resp) => {
     const productId = req.body.productId;
-    Product.findByIdAndDelete(productId)
+    Product.deleteOne({_id: productId, userId: req.user._id})
         .then(() => resp.redirect('/admin/products'))
         .catch(err => console.error(err));
 };
