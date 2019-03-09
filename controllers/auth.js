@@ -4,6 +4,9 @@ const nodemailer = require('nodemailer');
 const env = require('dotenv');
 const crypto = require('crypto');
 const sendGridTransport = require('nodemailer-sendgrid-transport');
+const {
+    validationResult
+} = require('express-validator/check')
 
 env.config();
 
@@ -25,6 +28,15 @@ exports.getLogin = (req, resp) => {
 exports.postLogin = (req, resp) => {
     const email = req.body.email;
     const password = req.body.password;
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return resp.status(422).render('auth/signup', {
+            path: '/signup',
+            pageTitle: 'Signup',
+            errorMessage: errors.array()[0].msg
+        });
+    }
 
     User.findOne({
             email: email
@@ -65,45 +77,54 @@ exports.getSignup = (req, resp) => {
     resp.render('auth/signup', {
         path: '/signup',
         pageTitle: 'Signup',
-        errorMessage: message && message.length > 0 ? message[0] : null
+        errorMessage: message && message.length > 0 ? message[0] : null,
+        oldInput: {
+            email: '',
+            password: '',
+            confirmPassword: ''
+        },
+        validationErrors: []
     });
 };
 
 exports.postSignup = (req, resp) => {
     const email = req.body.email;
     const pwd = req.body.password;
-    const confirmPwd = req.body.confirmPassword;
 
-    User.findOne({
-            email: email
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return resp.status(422).render('auth/signup', {
+            path: '/signup',
+            pageTitle: 'Signup',
+            errorMessage: errors.array()[0].msg,
+            oldInput: {
+                email: email,
+                password: pwd,
+                confirmPassword: req.body.confirmPassword
+            },
+            validationErrors: errors.array()
+        });
+    }
+
+    bcrypt.hash(pwd, 12)
+        .then(hashedPwd => {
+            const user = new User({
+                email: email,
+                password: hashedPwd,
+                cart: {
+                    items: []
+                }
+            });
+            return user.save();
         })
-        .then(userDoc => {
-            if (userDoc) {
-                req.flash('error', 'Email address already exists.');
-                return resp.redirect('/signup');
-            }
-
-            return bcrypt.hash(pwd, 12)
-                .then(hashedPwd => {
-                    const user = new User({
-                        email: email,
-                        password: hashedPwd,
-                        cart: {
-                            items: []
-                        }
-                    });
-                    return user.save();
-                })
-                .then(res => {
-                    resp.redirect('/login');
-                    return transporter.sendMail({
-                        to: email,
-                        from: 'shop@node-complete.com',
-                        subject: 'Signup succeeded',
-                        html: '<h1>You successfully signed up!</h1>'
-                    });
-                })
-                .catch(err => console.error(err));
+        .then(res => {
+            resp.redirect('/login');
+            return transporter.sendMail({
+                to: email,
+                from: 'shop@node-complete.com',
+                subject: 'Signup succeeded',
+                html: '<h1>You successfully signed up!</h1>'
+            });
         })
         .catch(err => console.error(err));
 };
